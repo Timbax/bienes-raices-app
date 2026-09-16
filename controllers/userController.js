@@ -1,7 +1,8 @@
 import { check, validationResult } from "express-validator";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import Usuario from "../models/Usuario.js";
-import { generarId } from "../helpers/tokens.js";
+import { generarJWT, generarId } from "../helpers/tokens.js";
 import { emailRegistro, emailOlvidePassword } from "../helpers/emails.js";
 
 const formularioLogin = (request, response) => {
@@ -51,12 +52,29 @@ const autenticar = async (request, response) => {
       csrfToken: request.csrfToken(),
       errores: [{ msg: "Tu cuenta no ha sido confirmada." }],
     });
-  } 
+  }
 
   //Revisar el password
+  if (!usuario.verificarPassword(password)) {
+    return response.render("auth/login", {
+      pagina: "Iniciar Sesión",
+      csrfToken: request.csrfToken(),
+      errores: [{ msg: "El Password es incorrecto!" }],
+    });
+  }
 
+  //Autenticar al usuario
+  const token = generarJWT({ id: usuario.id, nombre: usuario.nombre });
+  console.log(token);
 
+  //Almacenar en una cookie
 
+  return response
+    .cookie("_token", token, {
+      httpOnly: true,
+      //secure: true
+    })
+    .redirect("/mis-propiedades");
 };
 
 const formularioRegistro = (request, response) => {
